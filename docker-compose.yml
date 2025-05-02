@@ -27,7 +27,6 @@ services:
       - YARN_NODEMANAGER_USER=root
     volumes:
       - hadoop_data:/opt/hadoop_data
-      - ./config/kafka:/opt/kafka/config
       - ./notebooks:/notebooks
       - ./scripts:/scripts
     healthcheck:
