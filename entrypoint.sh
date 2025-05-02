@@ -50,7 +50,6 @@ while hdfs dfsadmin -safemode get | grep 'ON'; do
   sleep 5
 done
 
-
 echo "Starting YARN..."
 $HADOOP_HOME/sbin/start-yarn.sh
 
@@ -60,8 +59,7 @@ $HADOOP_HOME/bin/mapred --daemon start historyserver
 # Start ZooKeeper and Kafka
 echo "Starting ZooKeeper..."
 $KAFKA_HOME/bin/zookeeper-server-start.sh -daemon $KAFKA_HOME/config/zookeeper.properties
-
-sleep 5
+sleep 15
 
 echo "Starting Kafka broker..."
 $KAFKA_HOME/bin/kafka-server-start.sh -daemon $KAFKA_HOME/config/server.properties
