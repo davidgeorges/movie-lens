@@ -14,6 +14,7 @@ services:
       - "19888:19888"   # MapReduce JobHistory
       - "9092:9092"     # Kafka
       - "2181:2181"     # Zookeeper
+      - "8501:8501"  # Pour Streamlit
     environment:
       - JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
       - HADOOP_HOME=/opt/hadoop
@@ -29,6 +30,7 @@ services:
       - hadoop_data:/opt/hadoop_data
       - ./notebooks:/notebooks
       - ./scripts:/scripts
+      - ./interface:/interface
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9870"]
       interval: 30s
@@ -36,5 +38,15 @@ services:
       retries: 3
     restart: unless-stopped
 
+  mongodb:
+    image: mongo:6.0
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
 volumes:
   hadoop_data:
+  mongo_data:

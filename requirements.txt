@@ -5,3 +5,7 @@ pandas
 numpy
 matplotlib
 seaborn
+streamlit
+pymongo
+altair
+wordcloud

@@ -76,5 +76,19 @@ jupyter notebook \
   --notebook-dir=/notebooks \
   --no-browser &
 
+# Lancer le producer avec un délai (pour laisser Kafka démarrer)
+python3 /scripts/insert_movies_unique.py
+
+echo "Starting Streamlit dashboard..."
+streamlit run /interface/dashboard.py --server.port 8501 --server.address 0.0.0.0 &
+
+sleep 30
+
+# Lancer le producer avec un délai (pour laisser Kafka démarrer)
+python3 /scripts/kafka_producer.py &
+
+# Lancer le consumer en arrière-plan
+python3 /scripts/kafka_consumer.py &
+
 # Keep container alive
 tail -f /dev/null
