@@ -28,28 +28,31 @@ def get_data_from_mongo():
         movies_df = movies_df.rename(columns={'_id': 'mongo_id_movies'})
 
     # Vérifications des colonnes essentielles
-    if 'movieId' not in movies_df.columns:
-        st.error("Erreur: La colonne 'movieId' est manquante dans la collection 'movies'.")
-        return None, None
-    if 'movieId' not in ratings_df.columns:
-        st.error("Erreur: La colonne 'movieId' est manquante dans la collection 'ratings'.")
-        return None, None
-    if 'userId' not in ratings_df.columns:
-        st.error("Erreur: La colonne 'userId' est manquante dans la collection 'ratings'.")
-        return None, None
-    if 'title' not in movies_df.columns:
-        st.error("Erreur: La colonne 'title' est manquante dans la collection 'movies'.")
-        return None, None
-    if 'rating' not in ratings_df.columns:
-        st.error("Erreur: La colonne 'rating' est manquante dans la collection 'ratings'.")
-        return None, None
+    required_columns = {
+        "ratings": ['movieId', 'userId', 'rating'],
+        "movies": ['movieId', 'title']
+    }
+
+    for col in required_columns["ratings"]:
+        if col not in ratings_df.columns:
+            st.error(f"Erreur: La colonne '{col}' est manquante dans la collection 'ratings_streamed'.")
+            return None, None
+    for col in required_columns["movies"]:
+        if col not in movies_df.columns:
+            st.error(f"Erreur: La colonne '{col}' est manquante dans la collection 'movies'.")
+            return None, None
 
     return ratings_df, movies_df
 
+# --- BOUTON DE RAFRAÎCHISSEMENT DU CACHE ---
+if st.button("🔄 Rafraîchir les données depuis MongoDB"):
+    st.cache_data.clear()
+    st.success("✅ Données rechargées depuis MongoDB.")
+
+# --- Chargement des données
 ratings_df, movies_df = get_data_from_mongo()
 
 if ratings_df is not None and movies_df is not None:
-    # Fusionner les DataFrames
     data = pd.merge(ratings_df, movies_df, on='movieId')
 
     # --- STYLE CINÉMA ET ÉVALUATION AVEC TITRE CENTRÉ ET ICONS ---
@@ -57,7 +60,7 @@ if ratings_df is not None and movies_df is not None:
         """
         <style>
         body {
-            background-color: #e0e0e0; /* Arrière-plan gris */
+            background-color: #e0e0e0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         .stApp {
@@ -76,7 +79,7 @@ if ratings_df is not None and movies_df is not None:
         h1 {
             color: #e67e22;
             font-family: 'Impact', sans-serif;
-            font-size: 5em; /* Taille encore plus grande */
+            font-size: 5em;
             letter-spacing: 2px;
             text-shadow: 3px 3px #ccc;
             border-bottom: 5px solid #e67e22;
@@ -122,11 +125,9 @@ if ratings_df is not None and movies_df is not None:
             border-radius: 8px;
             border: 1px solid #eee;
         }
-        /* Style pour les graphiques Altair */
         .vega-embed {
             width: 100% !important;
         }
-        /* Style pour le top 5 des films */
         .top-movie-item {
             padding: 10px 0;
             border-bottom: 1px dashed #ccc;
@@ -152,10 +153,8 @@ if ratings_df is not None and movies_df is not None:
     )
 
     st.markdown("<div class='title-container'><h1>🎬 Écran Critique : Vos Films à la Loupe 🎬</h1></div>", unsafe_allow_html=True)
-
     st.header("🍿 Tendances Globales")
 
-    # Top 5 des films les mieux notés (global) - Présentation stylisée avec icône
     st.subheader("🏆 Top 5 des Films les Plus Appréciés")
     top_5_global = data.groupby('title')['rating'].mean().sort_values(ascending=False).head(5).reset_index()
     top_5_global.columns = ['Titre', 'Note Moyenne']
@@ -166,7 +165,7 @@ if ratings_df is not None and movies_df is not None:
                 <span class="top-movie-rating">Note : {row['Note Moyenne']:.2f} ⭐</span>
             </div>
         """, unsafe_allow_html=True)
-    st.markdown("<hr>", unsafe_allow_html=True) # Séparateur
+    st.markdown("<hr>", unsafe_allow_html=True)
 
     col_global1, col_global2 = st.columns(2)
 
@@ -174,28 +173,18 @@ if ratings_df is not None and movies_df is not None:
         st.subheader("📊 Distribution globale des notes")
         global_rating_counts = data['rating'].value_counts().sort_index().reset_index()
         global_rating_counts.columns = ['Note', 'Nombre de notes']
-
         chart_global_ratings = alt.Chart(global_rating_counts).mark_bar(color='#3498db').encode(
             x=alt.X('Note:O', title='Note'),
             y=alt.Y('Nombre de notes', title='Nombre de notes'),
             tooltip=['Note', 'Nombre de notes']
-        ).properties(
-            height=400
-        ).interactive()
+        ).properties(height=400).interactive()
         st.altair_chart(chart_global_ratings, use_container_width=True)
 
     with col_global2:
         st.subheader("☁️ Nuage de Mots des Films les Plus Notés")
-        # Calculer la note moyenne par film
         average_ratings = data.groupby('title')['rating'].mean().sort_values(ascending=False)
-
-        # Créer un dictionnaire où la clé est le titre et la valeur est la note (pour la pondération)
         words = {title: rating for title, rating in average_ratings.items()}
-
-        # Générer le nuage de mots
         wordcloud = WordCloud(width=800, height=400, background_color='white').generate_from_frequencies(words)
-
-        # Afficher le nuage de mots avec matplotlib
         fig, ax = plt.subplots()
         ax.imshow(wordcloud, interpolation='bilinear')
         ax.axis("off")
@@ -206,7 +195,6 @@ if ratings_df is not None and movies_df is not None:
     selected_user = st.selectbox("🎬 Choisir un spectateur :", user_ids)
 
     user_data = data[data['userId'] == selected_user]
-
     col_user1, col_user2 = st.columns(2)
 
     with col_user1:
@@ -221,17 +209,13 @@ if ratings_df is not None and movies_df is not None:
         if not user_data.empty:
             user_rating_counts = user_data['rating'].value_counts().sort_index().reset_index()
             user_rating_counts.columns = ['Note', 'Nombre de notes']
-
             chart_user_ratings = alt.Chart(user_rating_counts).mark_bar(color='#f39c12').encode(
                 x=alt.X('Note:O', title='Note'),
                 y=alt.Y('Nombre de notes', title='Nombre de notes'),
                 tooltip=['Note', 'Nombre de notes']
-            ).properties(
-                height=300
-            ).interactive()
+            ).properties(height=300).interactive()
             st.altair_chart(chart_user_ratings, use_container_width=True)
         else:
             st.info("Aucune note disponible pour ce spectateur.")
-
 else:
     st.error("Impossible de charger les données depuis MongoDB.")
